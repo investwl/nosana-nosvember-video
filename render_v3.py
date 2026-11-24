@@ -134,9 +134,9 @@ def wrap(d,text,font,maxw):
 
 def subtitle(img,en,idn,t):
     d=ImageDraw.Draw(img); a=fade(t,0.08,0.4)
-    fen=fb(56); fid=fr(40); maxw=W-150
+    fen=fb(56); fid=fr(46); maxw=W-150
     enl=wrap(d,en,fen,maxw); idl=wrap(d,idn,fid,maxw)
-    lh=68; ih=52; bh=len(enl)*lh+16+len(idl)*ih
+    lh=68; ih=58; bh=len(enl)*lh+16+len(idl)*ih
     y=int(H*0.815)-bh//2
     for l in enl:
         bb=d.textbbox((0,0),l,font=fen); x=(W-(bb[2]-bb[0]))//2
@@ -145,7 +145,7 @@ def subtitle(img,en,idn,t):
     y+=14
     for l in idl:
         bb=d.textbbox((0,0),l,font=fid); x=(W-(bb[2]-bb[0]))//2
-        d.text((x,y),l,font=fid,fill=tuple(int(c*a) for c in (196,206,220))); y+=ih
+        d.text((x,y),l,font=fid,fill=tuple(int(c*a) for c in (215,224,238))); y+=ih
 
 def shake(img,amt):
     if amt<=0.3: return img
@@ -154,10 +154,14 @@ def shake(img,amt):
                          resample=Image.BILINEAR,fillcolor=BG)
 
 # ---------- icon library ----------
-def human(d,cx,cy,s,col,a=1.0):
+def human(d,cx,cy,s,col,a=1.0,filled=True):
     col=tuple(int(c*a) for c in col)
-    d.ellipse([cx-s*0.32,cy-s*0.95,cx+s*0.32,cy-s*0.31],fill=col)          # head
-    d.rounded_rectangle([cx-s*0.42,cy-s*0.22,cx+s*0.42,cy+s*0.85],radius=int(s*0.2),fill=col)  # body
+    if filled:
+        d.ellipse([cx-s*0.32,cy-s*0.95,cx+s*0.32,cy-s*0.31],fill=col)          # head
+        d.rounded_rectangle([cx-s*0.42,cy-s*0.22,cx+s*0.42,cy+s*0.85],radius=int(s*0.2),fill=col)  # body
+    else:
+        d.ellipse([cx-s*0.32,cy-s*0.95,cx+s*0.32,cy-s*0.31],outline=col,width=6)  # head
+        d.rounded_rectangle([cx-s*0.42,cy-s*0.22,cx+s*0.42,cy+s*0.85],radius=int(s*0.2),outline=col,width=6)  # body
 
 def robot(d,cx,cy,s,col,a=1.0):
     col=tuple(int(c*a) for c in col)
@@ -230,7 +234,7 @@ def s_network(d,t):
     logo_mark(d,cx,cy,r,NOS)
     sat=[(-360,-210),(-330,210),(360,-200),(370,215),(-90,-330),(70,330)]
     for i,(ox,oy) in enumerate(sat):
-        a=fade(t,0.2+i*0.07,0.5+i*0.07)
+        a=fade(t,0.15+i*0.05,0.42+i*0.05)  # all satellites fully solid by t=1
         if a<=0: continue
         x,y=cx+ox,cy+oy
         d.line([cx,cy,x,y],fill=rgba(NOS,a*0.55),width=4)
@@ -243,10 +247,10 @@ def s_network(d,t):
 
 def s_market(d,t):
     cy=int(H*0.40); lx,rx=W//2-310,W//2+310
-    # hosts (humans + gpu) left, builders (robot + gpu) right
-    human(d,lx,cy-150,120,GRN,fade(t,0.1,0.4))
+    # hosts (humans + gpu) left, builders (robot + gpu) right — matched visual weight
+    human(d,lx,cy-150,120,GRN,fade(t,0.1,0.4),filled=False)
     gpu_card(d,lx,cy+110,86,GRN,fade(t,0.18,0.48))
-    robot(d,rx,cy-150,110,NOS,fade(t,0.3,0.6))
+    robot(d,rx,cy-150,120,NOS,fade(t,0.3,0.6))
     gpu_card(d,rx,cy+110,86,NOS,fade(t,0.38,0.68))
     # packet exchange both ways
     for k in range(6):
@@ -269,11 +273,11 @@ def s_earn(d,t):
         fn(d,x,cy+bob,84 if fn!=human else 92,col,a)
         f=fb(30); bb=d.textbbox((0,0),lab,font=f); lx=x-(bb[2]-bb[0])//2
         d.text((lx,cy+bob+120),lab,font=f,fill=rgba(col,a))
-    # flowing tokens (clean rings, not clip-art $)
+    # flowing tokens along a single arc BELOW the icons (no stray mid clutter)
     for k in range(7):
         ph=(t*0.7+k*0.143)%1.0; a=math.sin(ph*math.pi)
-        x=W//2+int(math.cos(k*1.3)*260*ph); y=int(cy+150-ph*240)
-        r=int(12+ph*14); col=GOLD if k%2 else GRN
+        x=W//2+int(lerp(-300,300,ph)); y=int(cy+205+math.sin(ph*math.pi)*-18)
+        r=int(11+ph*11); col=GOLD if k%2 else GRN
         d.ellipse([x-r,y-r,x+r,y+r],outline=rgba(col,a),width=4)
         d.ellipse([x-r*0.45,y-r*0.45,x+r*0.45,y+r*0.45],fill=rgba(col,a*0.8))
 
