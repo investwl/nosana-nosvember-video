@@ -169,8 +169,9 @@ def g_hook(d,t):
     gpu_card(d,cx,cy,s,col,thick=7)
     d.ellipse([cx-s*0.34,cy-s*0.34,cx+s*0.34,cy+s*0.34],outline=col,width=5)
     for k in range(3):
-        zt=(t*0.5+k*0.33)%1.0; f=fb(int(40+zt*46)); a=(1-zt)*0.85
-        d.text((cx+s*0.55+zt*120, cy-s*1.2-zt*170),"z",font=f,fill=rgba(GRN,a))
+        zt=(t*0.5+k*0.33)%1.0; f=fb(int(58+zt*64)); a=(1-zt)*0.9   # bigger Zzz
+        # anchored to the GPU's top-right corner
+        d.text((cx+s*0.62+zt*70, cy-s*0.95-zt*120),"z",font=f,fill=rgba(GRN,a))
     # quick interruption flash at t~0.5 (attention spike)
     if 0.45<t<0.6:
         k=1-abs((t-0.52)/0.08)
@@ -209,7 +210,10 @@ def g_network(d,t):
         a=fade(t,0.15+i*0.05,0.42+i*0.05)
         if a<=0.05: continue
         x,y=cx+ox,cy+oy
-        d.line([cx,cy,x,y],fill=rgba(NOS,a*0.5),width=4)
+        # trim connector so it stops at the hub ring, not through the N
+        ux,uy=ox/ math.hypot(ox,oy), oy/math.hypot(ox,oy)
+        sx,sy=cx+ux*(r+8),cy+uy*(r+8)
+        d.line([sx,sy,x,y],fill=rgba(NOS,a*0.5),width=4)
         gpu_card(d,x,y,38,GRN,a,thick=5)
         ph=(t*0.8+i*0.13)%1.0
         px=cx+ox*ph; py=cy+oy*ph
@@ -235,27 +239,40 @@ def g_flow(d,t):
         x2=int(lerp(mx+rr,rx-140,ph)); d.ellipse([x2-11,cy-11,x2+11,cy+11],fill=rgba(NOS,a))
 
 def g_benefit(d,t):
-    cx,cy=W//2,int(H*0.47)
-    # previously dim network now lighting up progressively
-    logo_mark(d,cx,cy-150,86,NOS)
-    sat=[(-300,-60),(-260,120),(300,-70),(310,130),(-80,-230),(90,240)]
-    for i,(ox,oy) in enumerate(sat):
-        a=fade(t,0.1+i*0.08,0.4+i*0.08)
-        x,y=cx+ox,cy-150+oy
-        d.line([cx,cy-150,x,y],fill=rgba(GRN,a*0.6),width=4)
-        gpu_card(d,x,y,40,GRN,a,thick=5)
-        ph=(t*0.9+i*0.15)%1.0
-        d.ellipse([cx+ox*ph-9,cy-150+oy*ph-9,cx+ox*ph+9,cy-150+oy*ph+9],fill=rgba(WHITE,a))
-    # activation pulse ring expanding (rewarding payoff)
-    pr=(t*1.1)%1.0
-    d.ellipse([cx-86-pr*260,cy-150-pr*260,cx+86+pr*260,cy+86-pr*260+300],
-              outline=rgba(GRN,(1-pr)*0.5),width=6)
-    # tokens flowing into a growing bar (utilization)
-    bw=int(520*easeio((t-0.3)/1.4)) if t>0.3 else 0
-    d.rounded_rectangle([cx-260,cy+180,cx-260+bw,cy+250],radius=12,fill=GRN)
-    f=fb(34); lab="GPU UTILIZED"
+    cx,cy=W//2,int(H*0.46)
+    # metaphor: idle GPU -> tokens flow -> AI queue served (NOT a repeat of network hub)
+    # left: single GPU powering up (green glow grows)
+    ga=fade(t,0.05,0.35)
+    gpu_card(d,cx-300,cy-120,120,GRN,ga,thick=7)
+    f=fb(30); lab="IDLE GPU"
     bb=d.textbbox((0,0),lab,font=f)
-    d.text((cx-(bb[2]-bb[0])//2,cy+266),lab,font=f,fill=rgba(WHITE,fade(t,0.4,0.8)))
+    d.text((cx-300-(bb[2]-bb[0])//2,cy+10),lab,font=f,fill=rgba(GRN,ga))
+    # center: flowing tokens along an arc toward the queue
+    for k in range(6):
+        ph=(t*0.7+k*0.167)%1.0; a=math.sin(ph*math.pi)
+        x=int(lerp(cx-180,cx+120,ph)); y=cy-120+int(math.sin(ph*math.pi)*-40)
+        d.ellipse([x-11,y-11,x+11,y+11],fill=rgba(NOS,a))
+    # right: AI builder being served (robot lights up)
+    robot(d,cx+300,cy-120,120,NOS,fade(t,0.4,0.7))
+    lab="AI WORKLOADS"
+    bb=d.textbbox((0,0),lab,font=f)
+    d.text((cx+300-(bb[2]-bb[0])//2,cy+10),lab,font=f,fill=rgba(NOS,fade(t,0.45,0.75)))
+    # proper progress bar with track + % counter
+    bx,by,bw,bh=cx-320,cy+200,640,46
+    d.rounded_rectangle([bx,by,bx+bw,by+bh],radius=12,outline=DIM,width=4)  # full track
+    prog=easeio((t-0.3)/1.6) if t>0.3 else 0.0
+    fw=int(bw*prog)
+    if fw>8:
+        d.rounded_rectangle([bx,by,bx+fw,by+bh],radius=12,fill=GRN)
+    # % label centered above track
+    pct=int(prog*100)
+    f2=fb(56); pt=f"{pct}%"
+    bb=d.textbbox((0,0),pt,font=f2)
+    d.text((cx-(bb[2]-bb[0])//2+2,by-96+2),pt,font=f2,fill=(0,0,0))
+    d.text((cx-(bb[2]-bb[0])//2,by-96),pt,font=f2,fill=rgba(GRN,fade(t,0.3,0.6)))
+    f=fb(32); lab="GPU UTILIZED"
+    bb=d.textbbox((0,0),lab,font=f)
+    d.text((cx-(bb[2]-bb[0])//2,by+bh+18),lab,font=f,fill=rgba(WHITE,fade(t,0.4,0.8)))
 
 def g_close(d,t):
     cx,cy=W//2,int(H*0.47)
