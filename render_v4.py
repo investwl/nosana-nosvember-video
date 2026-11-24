@@ -117,9 +117,23 @@ def robot(d,cx,cy,s,col,a=1.0):
     for sx in (-1,1): d.line([cx+sx*s*0.5,cy,cx+sx*s*0.78,cy+s*0.25],fill=col,width=5)
 
 def logo_mark(d,cx,cy,r,col):
-    d.ellipse([cx-r,cy-r,cx+r,cy+r],outline=col,width=max(4,int(r*0.12)))
-    f=fb(int(r*0.92)); bb=d.textbbox((0,0),"N",font=f)
-    d.text((cx-(bb[2]-bb[0])/2,cy-(bb[3]-bb[1])/2-bb[1]),"N",font=f,fill=col)
+    pass  # replaced by real logo assets below
+
+ASSETS="/home/ubuntu/nosana_video/assets"
+_ic=Image.open(f"{ASSETS}/nosana_icon.png").convert("RGBA")
+_wd=Image.open(f"{ASSETS}/nosana_word.png").convert("RGBA")
+def paste_icon(img,cx,cy,h):
+    """real Nosana icon mark, centered at (cx,cy) with height h"""
+    w=int(_ic.width*h/_ic.height); ic=_ic.resize((w,h),Image.LANCZOS)
+    img.paste(ic,(int(cx-w/2),int(cy-h/2)),ic)
+def paste_word(img,cx,cy,h):
+    w=int(_wd.width*h/_wd.height); wd=_wd.resize((w,h),Image.LANCZOS)
+    img.paste(wd,(int(cx-w/2),int(cy-h/2)),wd)
+def hub_logo(img,d,cx,cy,r,t,pulse=0.5):
+    """glow ring + dark disc + real Nosana icon, centered (for network hubs)."""
+    d.ellipse([cx-r-30,cy-r-30,cx+r+30,cy+r+30],outline=rgba(NOS,0.22*pulse+0.08),width=20)
+    d.ellipse([cx-r,cy-r,cx+r,cy+r],fill=(9,14,21),outline=NOS,width=8)
+    paste_icon(img,cx,cy,int(r*1.05))
 
 def headline(d,head,hi,t):
     """top headline with two-tone hierarchy"""
@@ -160,7 +174,7 @@ def subtitle(img,en,idn,t):
         d.text((x,y),l,font=fid,fill=rgba(IDC,a)); y+=ih
 
 # ---------- scene illustrations ----------
-def g_hook(d,t):
+def g_hook(img,d,t):
     cx,cy=W//2,int(H*0.47)
     s=230*fade(t,0.05,0.4)
     # GPU asleep — dim, slow breathing, Zzz
@@ -178,7 +192,7 @@ def g_hook(d,t):
         d.rounded_rectangle([cx-s,cy-s*0.66,cx+s,cy+s*0.66],radius=14,
                             outline=rgba(WHITE,k*0.7),width=8)
 
-def g_demand(d,t):
+def g_demand(img,d,t):
     cx,cy=W//2,int(H*0.47)
     n=9
     for i in range(n):
@@ -199,12 +213,11 @@ def g_demand(d,t):
         x=cx-330+k*82; y=int(cy-ph*360)
         d.ellipse([x+20,y-7,x+34,y+7],fill=rgba(WHITE,a*0.7))
 
-def g_network(d,t):
+def g_network(img,d,t):
     cx,cy=W//2,int(H*0.47)
     pulse=0.5+0.5*math.sin(t*3)
     r=120+8*pulse
-    d.ellipse([cx-r-30,cy-r-30,cx+r+30,cy+r+30],outline=rgba(NOS,0.22*pulse+0.08),width=20)
-    logo_mark(d,cx,cy,r,NOS)
+    hub_logo(img,d,cx,cy,r,t,pulse)
     sat=[(-380,-200),(-350,220),(380,-190),(390,230),(-120,-340),(100,350),(-400,10),(410,-10)]
     for i,(ox,oy) in enumerate(sat):
         a=fade(t,0.15+i*0.05,0.42+i*0.05)
@@ -219,13 +232,12 @@ def g_network(d,t):
         px=cx+ox*ph; py=cy+oy*ph
         d.ellipse([px-9,py-9,px+9,py+9],fill=rgba(WHITE,a))
 
-def g_flow(d,t):
+def g_flow(img,d,t):
     cy=int(H*0.47); lx,rx=W//2-330,W//2+330; mx=W//2
     # left: GPU host, center: Nosana network, right: AI builder
     gpu_card(d,lx,cy,120,GRN,fade(t,0.08,0.35),thick=7)
     pulse=0.5+0.5*math.sin(t*3); rr=96+6*pulse
-    d.ellipse([mx-rr-22,cy-rr-22,mx+rr+22,cy+rr+22],outline=rgba(NOS,0.2*pulse+0.08),width=16)
-    logo_mark(d,mx,cy,rr,NOS)
+    hub_logo(img,d,mx,cy,rr,t,pulse)
     robot(d,rx,cy,118,NOS,fade(t,0.5,0.78))
     # labels
     for x,lab,col,a in [(lx,"GPU HOST",GRN,fade(t,0.15,0.4)),(mx,"NOSANA",NOS,fade(t,0.3,0.55)),
@@ -238,7 +250,7 @@ def g_flow(d,t):
         x1=int(lerp(lx+130,mx-rr,ph)); d.ellipse([x1-11,cy-11,x1+11,cy+11],fill=rgba(GRN,a))
         x2=int(lerp(mx+rr,rx-140,ph)); d.ellipse([x2-11,cy-11,x2+11,cy+11],fill=rgba(NOS,a))
 
-def g_benefit(d,t):
+def g_benefit(img,d,t):
     cx,cy=W//2,int(H*0.46)
     # metaphor: idle GPU -> tokens flow -> AI queue served (NOT a repeat of network hub)
     # left: single GPU powering up (green glow grows)
@@ -274,7 +286,7 @@ def g_benefit(d,t):
     bb=d.textbbox((0,0),lab,font=f)
     d.text((cx-(bb[2]-bb[0])//2,by+bh+18),lab,font=f,fill=rgba(WHITE,fade(t,0.4,0.8)))
 
-def g_close(d,t):
+def g_close(img,d,t):
     cx,cy=W//2,int(H*0.47)
     r=(140+8*math.sin(t*2.4))*fade(t,0.05,0.45)
     for k in range(14):
@@ -282,7 +294,10 @@ def g_close(d,t):
         x=cx+int(math.cos(ang)*rr); y=cy+int(math.sin(ang)*rr)
         d.ellipse([x-8,y-8,x+8,y+8],fill=rgba(GRN,0.9))
     d.ellipse([cx-r,cy-r,cx+r,cy+r],outline=NOS,width=10)
-    logo_mark(d,cx,cy,r,NOS)
+    d.ellipse([cx-r,cy-r,cx+r,cy+r],fill=(9,14,21))
+    paste_icon(img,cx,cy,int(r*1.0))          # real Nosana icon in the ring
+    # real wordmark below the ring as the brand lockup
+    paste_word(img,cx,cy+r+70,56)
     # CTA
     a=fade(t,0.45,0.85); f=fb(46); cta="Explore Nosana →"
     bb=d.textbbox((0,0),cta,font=f); x=(W-(bb[2]-bb[0]))//2
@@ -300,7 +315,7 @@ GFX={"hook":g_hook,"demand":g_demand,"network":g_network,
 def compose(idx,t):
     sc=SCENES[idx]
     img=background(t)
-    GFX[sc["gfx"]](ImageDraw.Draw(img),t)
+    GFX[sc["gfx"]](img,ImageDraw.Draw(img),t)
     headline(ImageDraw.Draw(img),sc["head"],sc["head_hi"],t)
     img=bloom(img)
     img=scrim(img)
