@@ -17,7 +17,7 @@ Generator for a bilingual (EN + ID subtitle) kinetic-text short video about
 ## Run
 ```bash
 pip install pillow          # Pillow only
-python3 render.py           # -> frames/*.png (1020 frames)
+python3  render_v2.py      # -> frames/*.png (1020 frames)
 ffmpeg -framerate 30 -i frames/f_%05d.png \
   -c:v libx264 -pix_fmt yuv420p -crf 20 -movflags +faststart \
   nosana_nosvember.mp4
