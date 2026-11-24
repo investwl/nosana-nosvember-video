@@ -77,8 +77,43 @@ def background(t, accent):
         r=440; ld.ellipse([cx+ox-r,cy+oy-r,cx+ox+r,cy+oy+r],fill=rgba(col,0.22))
         lay=lay.filter(ImageFilter.GaussianBlur(190))
         img=Image.alpha_composite(img,lay)
+    img=Image.alpha_composite(img,perspective_grid(t))
     img=Image.alpha_composite(img,particle_layer(t))
     return img.convert("RGB")
+
+def perspective_grid(t):
+    """retro perspective floor for depth (replaces generic starfield-only bg)"""
+    lay=Image.new("RGBA",(W,H),(0,0,0,0)); d=ImageDraw.Draw(lay)
+    hz=int(H*0.62); cx=W//2
+    a=0.10
+    for i in range(1,14):
+        y=hz+int((i**1.7)*13)
+        if y>=H: break
+        k=0.3+0.7*(i/14)
+        d.line([(0,y),(W,y)],fill=rgba(NOS,a*k),width=2)
+    for i in range(-9,10):
+        x_top=cx+i*40; x_bot=cx+i*260
+        d.line([(x_top,hz),(x_bot,H)],fill=rgba(NOS,a*0.8),width=2)
+    # horizon glow
+    for y in range(hz-30,hz+8):
+        k=1-abs(y-hz)/38
+        d.line([(0,y),(W,y)],fill=rgba(NOS,0.18*k))
+    return lay
+
+def bloom(img, thresh=200, strength=0.6, radius=18):
+    """Fast neon glow, computed at 1/4 resolution then upscaled (~16x faster)."""
+    from PIL import ImageChops
+    base=img.convert("RGB")
+    qw,qh=W//4,H//4
+    small=base.resize((qw,qh),Image.BILINEAR)
+    def bright(c):
+        return c.point(lambda v: int(max(0,(v-thresh))*2.2) if v>thresh else 0)
+    bp=Image.merge("RGB",[bright(small.getchannel(i)) for i in range(3)])
+    bp=bp.filter(ImageFilter.GaussianBlur(max(2,radius//4)))
+    inv_b=ImageChops.invert(small); inv_p=ImageChops.invert(bp)
+    screened=ImageChops.invert(ImageChops.multiply(inv_b,inv_p))
+    screened=screened.resize((W,H),Image.BILINEAR)
+    return Image.blend(base,screened,strength)
 
 def scrim(img):
     ov=Image.new("RGBA",(W,H),(0,0,0,0)); od=ImageDraw.Draw(ov)
@@ -274,6 +309,7 @@ def render_frame(idx,t):
     if isinstance(res,tuple) and res and res[0]=="__PASTE__":
         _,cx,cy,lg=res
         img.paste(lg,(cx-lg.width//2,cy-lg.height//2),lg)
+    img=bloom(img)                      # neon glow / depth
     img=scrim(img)
     subtitle(img,sc["en"],sc["id"],t)
     img=transform_zoom(img,t)
