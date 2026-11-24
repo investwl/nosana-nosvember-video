@@ -1,0 +1,4 @@
+frames/
+*.mp4
+__pycache__/
+assets/asset_*.bin
