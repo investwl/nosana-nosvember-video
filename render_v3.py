@@ -99,9 +99,9 @@ def wrap(d,text,font,maxw):
 
 def subtitle(img,en,idn,t):
     d=ImageDraw.Draw(img); a=fade(t,0.08,0.4)
-    fen=fb(52); fid=fr(34); maxw=W-150
+    fen=fb(56); fid=fr(40); maxw=W-150
     enl=wrap(d,en,fen,maxw); idl=wrap(d,idn,fid,maxw)
-    lh=62; ih=44; bh=len(enl)*lh+14+len(idl)*ih
+    lh=68; ih=52; bh=len(enl)*lh+16+len(idl)*ih
     y=int(H*0.815)-bh//2
     for l in enl:
         bb=d.textbbox((0,0),l,font=fen); x=(W-(bb[2]-bb[0]))//2
@@ -110,7 +110,7 @@ def subtitle(img,en,idn,t):
     y+=14
     for l in idl:
         bb=d.textbbox((0,0),l,font=fid); x=(W-(bb[2]-bb[0]))//2
-        d.text((x,y),l,font=fid,fill=tuple(int(c*a) for c in IDC)); y+=ih
+        d.text((x,y),l,font=fid,fill=tuple(int(c*a) for c in (196,206,220))); y+=ih
 
 def shake(img,amt):
     if amt<=0.3: return img
@@ -234,12 +234,13 @@ def s_earn(d,t):
         fn(d,x,cy+bob,84 if fn!=human else 92,col,a)
         f=fb(30); bb=d.textbbox((0,0),lab,font=f); lx=x-(bb[2]-bb[0])//2
         d.text((lx,cy+bob+120),lab,font=f,fill=rgba(col,a))
-    # floating $ up
-    for k in range(6):
-        ph=(t*0.7+k*0.167)%1.0; a=math.sin(ph*math.pi)
-        x=W//2+int(math.cos(k)*240*ph); y=int(cy+140-ph*220)
-        f=fb(int(26+ph*20))
-        d.text((x,y),"$",font=f,fill=rgba(GOLD,a))
+    # flowing tokens (clean rings, not clip-art $)
+    for k in range(7):
+        ph=(t*0.7+k*0.143)%1.0; a=math.sin(ph*math.pi)
+        x=W//2+int(math.cos(k*1.3)*260*ph); y=int(cy+150-ph*240)
+        r=int(12+ph*14); col=GOLD if k%2 else GRN
+        d.ellipse([x-r,y-r,x+r,y+r],outline=rgba(col,a),width=4)
+        d.ellipse([x-r*0.45,y-r*0.45,x+r*0.45,y+r*0.45],fill=rgba(col,a*0.8))
 
 def s_outro(d,t):
     cx,cy=W//2,int(H*0.40)
@@ -251,26 +252,14 @@ def s_outro(d,t):
         x=cx+int(math.cos(ang)*rr); y=cy+int(math.sin(ang)*rr)
         d.ellipse([x-8,y-8,x+8,y+8],fill=rgba(GRN,0.9))
     d.ellipse([cx-r,cy-r,cx+r,cy+r],outline=NOS,width=10)
-    # draw real logo if available, else N mark
-    logo_path="/home/ubuntu/nosana_video/assets/nosana_logo.png"
-    if os.path.exists(logo_path):
-        try:
-            lg=Image.open(logo_path).convert("RGBA")
-            hs=int(r*1.1); ws=int(lg.width*hs/lg.height)
-            if ws>hs*4: ws=int(hs*4); hs=int(lg.height*ws/lg.width)
-            lg=lg.resize((max(8,ws),max(8,hs)),Image.LANCZOS)
-            img_=img_  # placeholder
-            return ("__PASTE__",cx,cy,lg)
-        except Exception: pass
+    # Always use crisp vector wordmark (the favicon asset is only 48px -> blurry).
     logo_mark(d,cx,cy,r,NOS)
-    # tagline + hashtags
-    f1=fb(64); tag="DePIN, but useful."
-    a=fade(t,0.3,0.7)
-    bb=d.textbbox((0,0),tag,font=f1); x=(W-(bb[2]-bb[0]))//2
-    d.text((x,cy+r+110),tag,font=f1,fill=rgba(WHITE,a))
-    f2=fb(40); tags="#NOSvember   #CreatorChallenge"
+    # Only hashtags as CTA, kept clean (subtitle carries the closer line):
+    f2=fb(44); tags="#NOSvember   #CreatorChallenge"
+    a=fade(t,0.5,0.9)
     bb=d.textbbox((0,0),tags,font=f2); x=(W-(bb[2]-bb[0]))//2
-    d.text((x,cy+r+210),tags,font=f2,fill=rgba(GRN,fade(t,0.5,0.9)))
+    d.text((x+2,cy+r+180+2),tags,font=f2,fill=(0,0,0))
+    d.text((x,cy+r+180),tags,font=f2,fill=rgba(GRN,a))
     return None
 
 GFX={"gpu":s_gpu,"price":s_price,"network":s_network,
